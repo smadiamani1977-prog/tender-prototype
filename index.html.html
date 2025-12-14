@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>نظام المعادلة التوفيقية للعطاءات</title>
+  <style>
+@media print {
+  body { background: #ffffff; margin: 10mm; }
+  .box, .header, .subtitle { box-shadow: none; }
+  .no-print { display: none !important; }
+
+  /* الصفحة التعريفية تطبع في صفحة مستقلة */
+  .print-page {
+    page-break-before: always;
+  }
+}
+
+    body {
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+    .gtd-logo {
+      height: 60px;   /* عدّلي الارتفاع إذا حبيتي */
+    }
+    .subtitle {
+      text-align: center;
+      font-weight: bold;
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 15px;
+    }
+    .box {
+      background: #ffffff;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    label {
+      font-weight: bold;
+    }
+    textarea, input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 5px;
+      margin-left: 5px;
+    }
+    button.primary { background-color: #007bff; color: white; }
+    button.secondary { background-color: #28a745; color: white; }
+    button.neutral { background-color: #6c757d; color: white; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      direction: rtl;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 5px;
+      text-align: center;
+    }
+    th { background: #e9ecef; }
+    input.cost-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 3px;
+      text-align: left;
+      direction: ltr;
+    }
+    .result-table { margin-top: 10px; }
+    .error { color: red; font-weight: bold; }
+    .success { color: green; font-weight: bold; }
+    .buttons-row {
+      margin-top: 10px;
+      text-align: center;
+    }
+    .about-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    @media print {
+      body { background: #ffffff; margin: 10mm; }
+      .box, .header, .subtitle { box-shadow: none; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    
+    <div>
+      <h1>نظام المعادلة التوفيقية للعطاءات</h1>
+<div class="subtitle">
+<h2 style="text-align:center; font-size:20px; color:#555;">
+  Web-Based Decision Support Prototype for Government Tender Assignment<br>
+  <span style="font-size:18px;">
+    Developed by Eng. Amani Ismail Al-Smadi – Government Tenders Department (GTD)
+  </span>
+</h2>
+      </div>
+    </div>
+  </div>
+
+  <div class="box no-print">
+    <p>
+      أدخل <strong>أسماء العطاءات</strong> و<strong>أسماء الشركات</strong>، ثم اضغط
+      <strong>"إنشاء جدول الكلف"</strong> لتعبئة قيم الإحالة (الكلف).
+      اترك الخانة فارغة أو اكتب "-" إذا لم تتقدم الشركة لهذا العطاء.
+    </p>
+  </div>
+
+  <div class="box no-print">
+    <label>أسماء العطاءات (افصل بينها بفواصل ،):</label>
+    <input type="text" id="tendersInput" placeholder="مثال: 70/2025, 71/2025, 72/2025, 77/2025, 80/2025" />
+
+    <label>أسماء الشركات (كل شركة بسطر منفصل):</label>
+    <textarea id="companiesInput" rows="6" placeholder="اكتب كل شركة في سطر"></textarea>
+
+    <button class="primary" onclick="createCostTable()">إنشاء جدول الكلف</button>
+    <span id="createMsg" class="error"></span>
+  </div>
+
+  <div class="box" id="costTableBox" style="display:none;">
+    <h3>جدول الكلف (قيمة الإحالة لكل عرض)</h3>
+    <div id="costTableContainer"></div>
+    <div class="no-print">
+      <button class="secondary" onclick="solveAssignment()">احسب المعادلة التوفيقية</button>
+      <div id="solveMsg"></div>
+    </div>
+  </div>
+
+  <div class="box" id="resultsBox" style="display:none;">
+    <h3>النتائج المثلى (Optimal Assignment)</h3>
+    <div id="resultsContainer"></div>
+
+    <div class="buttons-row no-print">
+      <button class="neutral" onclick="printResults()">طباعة / حفظ PDF</button>
+      <button class="primary" onclick="exportCSV()">تصدير النتائج إلى Excel (CSV)</button>
+    </div>
+
+    <p style="text-align:center; margin-top:15px; font-weight:bold; color:#555;">
+      Developed by Eng. Amani Ismail Al-Smadi / Government Tenders Department (GTD)
+    </p>
+  </div>
+
+  <div class="box print-page">
+
+    <div class="about-title">About this prototype</div>
+    <p>
+      This web-based tool implements the tender assignment (comparative) formula used in the
+  Government Tenders Department (GTD) to distribute projects among multiple contractors,
+  ensuring that each tender is awarded to only one company and that no company wins more
+  than one tender in a given batch. In addition, the model aims to achieve the minimum total
+  awarded cost across all tenders as an optimization objective. The prototype supports
+  transparency, fairness, and time efficiency, and is part of the research of
+  <strong>Eng. Amani Ismail Al-Smadi</strong> on based decision-support systems for
+  enhancing integrity and transparency in public procurement.
+    </p>
+  </div>
+
+<script>
+  let currentTenders = [];
+  let currentCompanies = [];
+  let lastResults = []; // لحفظ النتائج للتصدير
+
+  function createCostTable() {
+    const tendersStr = document.getElementById("tendersInput").value.trim();
+    const companiesStr = document.getElementById("companiesInput").value.trim();
+    const msg = document.getElementById("createMsg");
+    msg.textContent = "";
+
+    if (!tendersStr || !companiesStr) {
+      msg.textContent = "رجاءً أدخل أسماء العطاءات وأسماء الشركات.";
+      return;
+    }
+
+    const tenders = tendersStr.split(/[\n,،]+/).map(s => s.trim()).filter(s => s.length > 0);
+    const companies = companiesStr.split("\n").map(s => s.trim()).filter(s => s.length > 0);
+
+    if (tenders.length === 0 || companies.length === 0) {
+      msg.textContent = "عدد العطاءات أو الشركات لا يمكن أن يكون صفراً.";
+      return;
+    }
+
+    currentTenders = tenders;
+    currentCompanies = companies;
+
+    const container = document.getElementById("costTableContainer");
+    container.innerHTML = "";
+
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+
+    const cornerTh = document.createElement("th");
+    cornerTh.textContent = "الشركات \\ العطاءات";
+    headerRow.appendChild(cornerTh);
+
+    tenders.forEach(t => {
+      const th = document.createElement("th");
+      th.textContent = t;
+      headerRow.appendChild(th);
+    });
+
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    companies.forEach((comp, i) => {
+      const row = document.createElement("tr");
+
+      const compCell = document.createElement("td");
+      compCell.textContent = comp;
+      row.appendChild(compCell);
+
+      for (let j = 0; j < tenders.length; j++) {
+        const cell = document.createElement("td");
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "0.01";
+        input.className = "cost-input";
+        input.placeholder = "-";
+        input.id = `cost_r${i}_c${j}`;
+        cell.appendChild(input);
+        row.appendChild(cell);
+      }
+
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    container.appendChild(table);
+
+    document.getElementById("costTableBox").style.display = "block";
+    document.getElementById("resultsBox").style.display = "none";
+    document.getElementById("solveMsg").innerHTML = "";
+  }
+
+  function solveAssignment() {
+    const msg = document.getElementById("solveMsg");
+    msg.textContent = "";
+    msg.className = "";
+
+    const m = currentCompanies.length;
+    const n = currentTenders.length;
+
+    if (m === 0 || n === 0) {
+      msg.textContent = "لا يوجد شركات أو عطاءات لحل المسألة.";
+      msg.className = "error";
+      return;
+    }
+
+    const costMatrix = [];
+    for (let i = 0; i < m; i++) {
+      const row = [];
+      for (let j = 0; j < n; j++) {
+        const inp = document.getElementById(`cost_r${i}_c${j}`);
+        let val = inp.value.trim();
+        if (val === "" || val === "-") {
+          row.push(null);
+        } else {
+          const num = parseFloat(val);
+          if (isNaN(num) || num < 0) {
+            msg.textContent = "تأكد من إدخال قيم كلفة صحيحة (أرقام موجبة فقط).";
+            msg.className = "error";
+            return;
+          }
+          row.push(num);
+        }
+      }
+      costMatrix.push(row);
+    }
+
+    const result = findBestAssignment(costMatrix);
+
+    if (!result || result.bestAssignment === null) {
+      msg.textContent = "لا يوجد تعيين صالح يحقق القواعد المطلوبة.";
+      msg.className = "error";
+      document.getElementById("resultsBox").style.display = "none";
+      return;
+    }
+
+    msg.textContent = "تم إيجاد الحل الأمثل باستخدام المعادلة التوفيقية.";
+    msg.className = "success";
+
+    const { bestAssignment, bestCost } = result;
+    const resultsDiv = document.getElementById("resultsContainer");
+    resultsDiv.innerHTML = "";
+    lastResults = [];
+
+    const table = document.createElement("table");
+    table.className = "result-table";
+
+    const thead2 = document.createElement("thead");
+    const headerRow2 = document.createElement("tr");
+    ["العطاء", "الشركة", "الكلفة"].forEach(text => {
+      const th = document.createElement("th");
+      th.textContent = text;
+      headerRow2.appendChild(th);
+    });
+    thead2.appendChild(headerRow2);
+    table.appendChild(thead2);
+
+    const tbody2 = document.createElement("tbody");
+
+    for (let j = 0; j < n; j++) {
+      const i = bestAssignment[j];
+      const row = document.createElement("tr");
+
+      const tdTender = document.createElement("td");
+      tdTender.textContent = currentTenders[j];
+      row.appendChild(tdTender);
+
+      const tdCompany = document.createElement("td");
+      tdCompany.textContent = currentCompanies[i];
+      row.appendChild(tdCompany);
+
+      const chosenCost = costMatrix[i][j];
+      const tdCost = document.createElement("td");
+      tdCost.textContent = chosenCost.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      row.appendChild(tdCost);
+
+      tbody2.appendChild(row);
+
+      lastResults.push({
+        tender: currentTenders[j],
+        company: currentCompanies[i],
+        cost: chosenCost
+      });
+    }
+    table.appendChild(tbody2);
+
+    const totalP = document.createElement("p");
+    totalP.innerHTML = `<strong>مجموع الكلفة المثلى = ${bestCost.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })} دينار</strong>`;
+
+    resultsDiv.appendChild(table);
+    resultsDiv.appendChild(totalP);
+
+    document.getElementById("resultsBox").style.display = "block";
+  }
+
+  function findBestAssignment(costMatrix) {
+    const m = costMatrix.length;
+    const n = costMatrix[0].length;
+
+    let bestCost = Infinity;
+    let bestAssignment = null;
+    const used = new Array(m).fill(false);
+    const currentAssign = new Array(n);
+
+    function backtrack(tIndex, currentCost) {
+      if (tIndex === n) {
+        if (currentCost < bestCost) {
+          bestCost = currentCost;
+          bestAssignment = currentAssign.slice();
+        }
+        return;
+      }
+
+      for (let i = 0; i < m; i++) {
+        if (used[i]) continue;
+        const c = costMatrix[i][tIndex];
+        if (c === null || !isFinite(c)) continue;
+
+        const newCost = currentCost + c;
+        if (newCost >= bestCost) continue;
+
+        used[i] = true;
+        currentAssign[tIndex] = i;
+        backtrack(tIndex + 1, newCost);
+        used[i] = false;
+      }
+    }
+
+    backtrack(0, 0);
+    return { bestCost, bestAssignment };
+  }
+
+  function printResults() {
+    window.print();
+  }
+
+  function exportCSV() {
+    if (!lastResults || lastResults.length === 0) {
+      alert("لا توجد نتائج لتصديرها. الرجاء حساب المعادلة أولاً.");
+      return;
+    }
+
+    let csv = "Tender,Company,Cost\n";
+    lastResults.forEach(r => {
+      csv += `"${r.tender}","${r.company}",${r.cost}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tender_assignment_results.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+</script>
+
+</body>
+</html>
